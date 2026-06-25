@@ -1,0 +1,43 @@
+# ============================================================================
+#  .gitignore  --  keep build artifacts out of the repository
+# ============================================================================
+#  We commit SOURCE only. Everything that the compiler/linker regenerates is
+#  ignored so the repo stays small and never has merge conflicts on binaries.
+# ============================================================================
+
+# --- command-line build output (build.ps1) ---
+/build/
+
+# --- Visual Studio per-user / IDE state ---
+.vs/
+*.user
+*.suo
+*.vcxproj.user
+
+# --- Visual Studio / MSBuild output + intermediate directories ---
+# Our project writes the exe to vs\<Config>\ and objects to vs\<Config>\obj\,
+# and the CUDA targets stage temporaries under vs\ChaCha20CUDA\.
+vs/Debug/
+vs/Release/
+vs/x64/
+vs/ChaCha20CUDA/
+**/x64/Debug/
+**/x64/Release/
+
+# --- object / binary / debug files ---
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.idb
+
+# --- nvcc intermediate / device-code temporaries ---
+*.ptx
+*.cubin
+*.fatbin
+*.cudafe*
+*.module_id
+tmpxft_*

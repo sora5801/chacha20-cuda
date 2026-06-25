@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  This optional file only controls how files are GROUPED in Visual Studio's
+  Solution Explorer (the little virtual folders). It has no effect on the build.
+  We mirror the on-disk layout: src / tests / demo / include.
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{a1111111-1111-1111-1111-111111111111}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tests">
+      <UniqueIdentifier>{a2222222-2222-2222-2222-222222222222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="demo">
+      <UniqueIdentifier>{a3333333-3333-3333-3333-333333333333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{a4444444-4444-4444-4444-444444444444}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+
+  <ItemGroup>
+    <CudaCompile Include="..\src\main.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\chacha20.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\tests\test_vectors.cu">
+      <Filter>tests</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\demo\demo.cu">
+      <Filter>demo</Filter>
+    </CudaCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClCompile Include="..\src\chacha20_reference.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="..\include\chacha20.cuh">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\chacha20_reference.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\tests\test_vectors.cuh">
+      <Filter>tests</Filter>
+    </ClInclude>
+    <ClInclude Include="..\demo\demo.cuh">
+      <Filter>demo</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ============================================================================
+   ChaCha20CUDA.vcxproj : Visual Studio 2026 project for the CUDA build
+  ============================================================================
+
+   This MSBuild project tells Visual Studio how to compile the five source
+   files into one console executable using the CUDA 13.3 toolchain. You should
+   rarely need to read it; open ChaCha20CUDA.sln in Visual Studio and press
+   Ctrl+F5 instead. It is annotated so you can see *how* CUDA plugs into MSBuild.
+
+   The key idea: NVIDIA ships a "build customization" (CUDA 13.3.props /
+   .targets) that teaches MSBuild about a new item type, CudaCompile. Files
+   listed under CudaCompile are sent to nvcc; everything else (.cpp) goes to
+   the normal C++ compiler, cl.exe. We import those customizations at the two
+   ImportGroup lines near the bottom.
+
+   Reference card: RTX 2080 SUPER = Turing = compute capability 7.5 (sm_75).
+   To target a different GPU, change the CodeGeneration values below.
+  ============================================================================
+-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- The build configurations this project offers: Debug and Release, x64
+       only. 32-bit CUDA has not existed for many years, so there is no Win32. -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+
+  <!-- Project-wide identity. The GUID uniquely names this project to the .sln. -->
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <ProjectGuid>{B7A3F1C2-9D4E-4A6B-8E1F-2C3D4E5F6A7B}</ProjectGuid>
+    <RootNamespace>ChaCha20CUDA</RootNamespace>
+    <!-- "10.0" means "use the latest Windows 10/11 SDK installed". -->
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Pull in the default C++ properties before we override anything. -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <!-- Per-configuration high-level settings. ConfigurationType=Application
+       => produce an .exe. PlatformToolset v145 is the VS 2026 MSVC toolset. -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+
+  <!-- Standard C++ properties. -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <!-- EXTENSION SETTINGS: bring in the CUDA build customization. After this
+       import, MSBuild understands <CudaCompile> items and knows where nvcc and
+       the CUDA headers/libs live ($(CudaToolkitDir), $(CudaToolkitLibDir)). -->
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.3.props" />
+  </ImportGroup>
+
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+
+  <!-- Where build outputs go. Both configs write to vs\<Config>\ for the .exe
+       and vs\<Config>\obj\ for intermediates. -->
+  <PropertyGroup>
+    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\obj\</IntDir>
+  </PropertyGroup>
+
+  <!-- ====================  DEBUG build settings  ==================== -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <!-- Our headers live in ..\include relative to this project file. -->
+      <AdditionalIncludeDirectories>$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <!-- Link the CUDA runtime. cudart_static avoids a separate DLL dependency. -->
+      <AdditionalDependencies>cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <CudaCompile>
+      <!-- 64-bit device code. -->
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <!-- Generate SASS + PTX for sm_75 (Turing / RTX 20-series). -->
+      <CodeGeneration>compute_75,sm_75</CodeGeneration>
+      <!-- -G generates debuggable device code (use Nsight to step into kernels). -->
+      <GenerateLineInfo>true</GenerateLineInfo>
+      <Include>$(ProjectDir)..\include;%(Include)</Include>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+
+  <!-- ====================  RELEASE build settings  ==================== -->
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(CudaToolkitLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_75,sm_75</CodeGeneration>
+      <Include>$(ProjectDir)..\include;%(Include)</Include>
+      <!-- Optimize device code (nvcc -O3 is implied for release device code). -->
+    </CudaCompile>
+  </ItemDefinitionGroup>
+
+  <!-- ====================  THE SOURCE FILES  ====================
+       .cu files compile with nvcc (CudaCompile); .cpp with cl (ClCompile);
+       headers are listed (ClInclude) only so they appear in Solution Explorer. -->
+  <ItemGroup>
+    <CudaCompile Include="..\src\main.cu" />
+    <CudaCompile Include="..\src\chacha20.cu" />
+    <CudaCompile Include="..\tests\test_vectors.cu" />
+    <CudaCompile Include="..\demo\demo.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\chacha20_reference.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\chacha20.cuh" />
+    <ClInclude Include="..\src\chacha20_reference.h" />
+    <ClInclude Include="..\tests\test_vectors.cuh" />
+    <ClInclude Include="..\demo\demo.cuh" />
+  </ItemGroup>
+
+  <!-- Standard C++ targets, then the CUDA targets that wire nvcc into Build. -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 13.3.targets" />
+  </ImportGroup>
+
+</Project>

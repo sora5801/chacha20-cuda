@@ -1,0 +1,10 @@
+# Normalize line endings so the repo is identical on Windows, Linux, and macOS.
+# Text files are stored with LF in the repository; Git converts to the native
+# ending on checkout. This prevents noisy CRLF/LF diffs in a cross-platform repo.
+* text=auto eol=lf
+
+# Windows-only tooling that genuinely wants CRLF.
+*.sln        text eol=crlf
+*.vcxproj    text eol=crlf
+*.filters    text eol=crlf
+*.ps1        text eol=crlf
