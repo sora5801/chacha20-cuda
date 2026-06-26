@@ -41,8 +41,15 @@ static bool ensure_cuda_device() {
     }
 
     // Bind to device 0 and announce it. A multi-GPU box could select another,
-    // but for a study demo device 0 is the right default.
-    cudaSetDevice(0);
+    // but for a study demo device 0 is the right default. We check the return
+    // even though ordinal 0 is provably valid here (count >= 1 just above): the
+    // bind step decides which GPU every later kernel runs on, so it deserves the
+    // same error-checking discipline as the count probe.
+    cudaError_t set_st = cudaSetDevice(0);
+    if (set_st != cudaSuccess) {
+        printf("cudaSetDevice(0) failed: %s\n", cudaGetErrorString(set_st));
+        return false;
+    }
     cudaDeviceProp prop;
     if (cudaGetDeviceProperties(&prop, 0) == cudaSuccess) {
         printf("Using GPU 0: %s (sm_%d%d)\n\n", prop.name, prop.major, prop.minor);

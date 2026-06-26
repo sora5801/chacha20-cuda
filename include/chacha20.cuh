@@ -223,7 +223,12 @@ cudaError_t chacha20_xor_cuda(const uint8_t* h_input,
 //
 //  Parameters:
 //      d_input          : DEVICE pointer to `len` input bytes.
-//      d_output         : DEVICE pointer to `len` output bytes.
+//      d_output         : DEVICE pointer to `len` output bytes. MUST NOT alias
+//                         d_input: the kernel marks its pointers __restrict__
+//                         (worth ~6x throughput), so the two buffers have to be
+//                         distinct. For IN-PLACE encryption use the high-level
+//                         chacha20_xor_cuda(), which double-buffers on the
+//                         device so the kernel never sees aliasing.
 //      len              : number of bytes to process.
 //      init             : the initial state, already built with
 //                         chacha20_init_state(). Passed by value; the kernel

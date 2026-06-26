@@ -79,8 +79,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
 
-  <!-- Where build outputs go. Both configs write to vs\<Config>\ for the .exe
-       and vs\<Config>\obj\ for intermediates. -->
+  <!-- Where build outputs go. Both configs write the .exe to vs\<Config>\ and
+       host/link intermediates (the .cpp object, .tlog, .pdb, ...) to
+       vs\<Config>\obj\ ($(IntDir)). NOTE: the CUDA build customization does NOT
+       honor $(IntDir) for DEVICE objects; it stages the compiled .cu objects
+       (main.cu.obj, chacha20.cu.obj, ...) under vs\ChaCha20CUDA\x64\<Config>\
+       instead. .gitignore accounts for both locations. -->
+
   <PropertyGroup>
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)$(Configuration)\obj\</IntDir>
@@ -108,8 +113,15 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <!-- Generate SASS + PTX for sm_75 (Turing / RTX 20-series). -->
       <CodeGeneration>compute_75,sm_75</CodeGeneration>
-      <!-- -G generates debuggable device code (use Nsight to step into kernels). -->
-      <GenerateLineInfo>true</GenerateLineInfo>
+      <!-- GPUDebugInfo=true passes nvcc -G: full device-side debug info so you
+           can set kernel breakpoints, single-step, and inspect locals in
+           Nsight. -G also disables device optimizations, which is exactly what
+           a Debug build wants. Do NOT also set GenerateLineInfo here: nvcc
+           rejects -G (-G) and -lineinfo together, and -G is the debugging
+           superset. (GenerateLineInfo -> -lineinfo only adds source-line info
+           for profiling/backtraces and does NOT enable kernel stepping; it is
+           the right choice for the optimized Release build, not Debug.) -->
+      <GPUDebugInfo>true</GPUDebugInfo>
       <Include>$(ProjectDir)..\include;%(Include)</Include>
     </CudaCompile>
   </ItemDefinitionGroup>

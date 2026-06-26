@@ -156,19 +156,39 @@ static int demo_benchmark() {
                              cudaFree(d_in); return 1; }
 
     // Fill the input with something non-trivial. cudaMemset is plenty -- the
-    // cipher's speed does not depend on the input values.
-    cudaMemset(d_in, 0xA5, len);
+    // cipher's speed does not depend on the input values. We check its return:
+    // this project's whole thesis (see the CUDA_CHECK note in chacha20.cu) is
+    // that ignored CUDA errors are how kernels "silently do nothing", so the
+    // benchmark holds itself to the same standard it preaches. (We cannot reuse
+    // CUDA_CHECK here -- it lives in chacha20.cu and returns cudaError_t, while
+    // this function returns int -- so we mirror the local cudaMalloc checks.)
+    st = cudaMemset(d_in, 0xA5, len);
+    if (st != cudaSuccess) {
+        printf("  cudaMemset failed: %s\n", cudaGetErrorString(st));
+        cudaFree(d_in); cudaFree(d_out); return 1;
+    }
 
     // --- CUDA event timers --------------------------------------------------
     // Events are recorded into the stream and timestamped by the GPU itself, so
     // the measured interval reflects actual device execution, not host jitter.
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    cudaEvent_t start = nullptr, stop = nullptr;
+    if (cudaEventCreate(&start) != cudaSuccess ||
+        cudaEventCreate(&stop)  != cudaSuccess) {
+        printf("  cudaEventCreate failed\n");
+        cudaEventDestroy(start); cudaEventDestroy(stop);
+        cudaFree(d_in); cudaFree(d_out); return 1;
+    }
 
     // Warm-up: absorbs first-launch one-time costs so they don't skew timing.
-    chacha20_xor_device(d_in, d_out, len, init, 256, 0);
-    cudaDeviceSynchronize();
+    // If even this launch fails, every measured number below would be garbage,
+    // so we stop here with a clear message instead of printing a bogus GB/s.
+    st = chacha20_xor_device(d_in, d_out, len, init, 256, 0);
+    if (st == cudaSuccess) st = cudaDeviceSynchronize();
+    if (st != cudaSuccess) {
+        printf("  warm-up launch failed: %s\n", cudaGetErrorString(st));
+        cudaEventDestroy(start); cudaEventDestroy(stop);
+        cudaFree(d_in); cudaFree(d_out); return 1;
+    }
 
     // --- Timed region: `iterations` kernel launches back to back ------------
     cudaEventRecord(start, 0);
@@ -179,7 +199,16 @@ static int demo_benchmark() {
     cudaEventSynchronize(stop);   // block host until `stop` has been reached
 
     float ms = 0.0f;
-    cudaEventElapsedTime(&ms, start, stop);   // milliseconds for ALL iterations
+    // If timing failed, ms would stay 0 and the throughput math below would
+    // divide by zero and print "inf" -- guard against reporting a meaningless
+    // number, which is exactly the silent-garbage failure mode we warn about.
+    st = cudaEventElapsedTime(&ms, start, stop);
+    if (st != cudaSuccess || ms <= 0.0f) {
+        printf("  timing failed (cudaEventElapsedTime): %s\n",
+               cudaGetErrorString(st));
+        cudaEventDestroy(start); cudaEventDestroy(stop);
+        cudaFree(d_in); cudaFree(d_out); return 1;
+    }
 
     // --- Convert to human numbers -------------------------------------------
     const double seconds      = (ms / 1000.0);

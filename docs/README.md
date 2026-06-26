@@ -35,3 +35,4 @@ docs/0003-<short-title>.md
 | # | Document | Summary |
 |---|----------|---------|
 | 0001 | [0001-initial-implementation.md](0001-initial-implementation.md) | Initial ChaCha20 CUDA implementation, tests, demo, and build files. |
+| 0002 | [0002-ultracode-audit.md](0002-ultracode-audit.md) | Multi-agent adversarial audit pass: 7 teaching-accuracy/safety fixes (incl. the `__restrict__` contract, where the audit's preferred fix was caught as a 6× regression by re-measuring). |

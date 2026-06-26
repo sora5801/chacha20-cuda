@@ -264,9 +264,13 @@ It is written for **clarity first**. Deliberate didactic simplifications that
 also leave performance on the table (good exercises if you want to go faster):
 
 - **Byte-wise load/XOR/store.** The serialization loop touches memory one byte
-  at a time. Vectorizing to `uint4` (16 bytes/transaction) for full blocks
-  would dramatically improve memory coalescing and throughput; only the partial
-  final block needs the byte path.
+  at a time. Vectorizing to `uint4` (16 bytes/access) for full blocks would cut
+  the instruction and transaction count and widen each access, improving
+  throughput. Note it does **not** by itself make a warp's accesses contiguous:
+  with one 64-byte block per thread, adjacent threads stay 64 bytes apart, so
+  full warp-level *coalescing* also needs a mapping change (e.g. a
+  `uint4`-granular grid-stride layout where a warp streams consecutive chunks).
+  Only the partial final block needs the byte path.
 - **One block per thread.** Fine here, but very large buffers can also use a
   grid-stride loop so a fixed-size grid covers any length.
 - **No `__restrict__`-driven overlap of compute and copy.** A streaming version

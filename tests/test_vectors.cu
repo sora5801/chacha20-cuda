@@ -296,11 +296,13 @@ static bool test_gpu_vs_cpu_many_lengths() {
 }
 
 // ============================================================================
-//  TEST 7 -- In-place encryption (output buffer aliases the input buffer)
+//  TEST 7 -- In-place encryption (host output buffer aliases the host input)
 // ----------------------------------------------------------------------------
-//  Many real callers encrypt a buffer in place to save memory. Each GPU thread
-//  only ever reads and writes its own 64-byte slice, so aliasing is safe; this
-//  test proves it by encrypting in place and decrypting back to the original.
+//  Many real callers encrypt a buffer in place to save memory. The HIGH-LEVEL
+//  chacha20_xor_cuda() supports this: even when output == input on the host, it
+//  stages through two SEPARATE device buffers, so the kernel (whose pointers
+//  are __restrict__ and therefore must not alias) never actually sees aliasing.
+//  This test proves the round trip by encrypting in place and decrypting back.
 // ============================================================================
 static bool test_inplace_gpu() {
     const uint8_t key[32] = {
